@@ -8,11 +8,10 @@ import (
 
 	"github.com/projecteru2/core/log"
 	resourcetypes "github.com/projecteru2/core/resource/types"
+	"github.com/projecteru2/core/utils"
 	zerolog "github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
-	"github.com/yuyang0/resource-rbd/config"
 	"github.com/yuyang0/resource-rbd/rbd"
-	"github.com/yuyang0/resource-rbd/rbd/util/idgen"
 )
 
 var (
@@ -21,7 +20,7 @@ var (
 )
 
 func Serve(c *cli.Context, f func(s *rbd.Plugin, in resourcetypes.RawParams) (interface{}, error)) error {
-	cfg, err := config.New(ConfigPath)
+	cfg, err := utils.LoadConfig(ConfigPath)
 	if err != nil {
 		return cli.Exit(err, 128)
 	}
@@ -31,9 +30,6 @@ func Serve(c *cli.Context, f func(s *rbd.Plugin, in resourcetypes.RawParams) (in
 		t = &testing.T{}
 	}
 
-	if err := idgen.Init(cfg.ID); err != nil {
-		return cli.Exit(err, 128)
-	}
 	if err := log.SetupLog(c.Context, cfg.LogLevel, cfg.SentryDSN); err != nil {
 		zerolog.Fatal().Err(err).Send()
 	}

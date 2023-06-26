@@ -54,6 +54,10 @@ func (n *NodeResourceInfo) UsageSize() int64 {
 	return n.Usage.SizeInBytes
 }
 
+func (n *NodeResourceInfo) AvailableSize() int64 {
+	return n.Capacity.SizeInBytes - n.Usage.SizeInBytes
+}
+
 // DeepCopy .
 func (n *NodeResourceInfo) DeepCopy() *NodeResourceInfo {
 	return &NodeResourceInfo{

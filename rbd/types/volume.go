@@ -9,10 +9,11 @@ import (
 	"github.com/projecteru2/core/utils"
 )
 
+// VolumeBinding format =>  pool/image:dst[:flags][:size][:read_IOPS:write_IOPS:read_bytes:write_bytes]
 type VolumeBinding struct {
 	Pool        string `json:"pool" mapstructure:"pool"`
 	Image       string `json:"image" mapstructure:"image"`
-	Destination string `json:"dest" mapstructure:"dest"`
+	Destination string `json:"dest" mapstructure:"destination"`
 	Flags       string `json:"flags" mapstructure:"flags"`
 	SizeInBytes int64  `json:"size_in_bytes" mapstructure:"size_in_bytes"`
 	ReadIOPS    int64  `json:"read_iops" mapstructure:"read_iops"`
@@ -23,6 +24,10 @@ type VolumeBinding struct {
 
 func (vb *VolumeBinding) GetSource() string {
 	return fmt.Sprintf("%s/%s", vb.Pool, vb.Image)
+}
+
+func (vb *VolumeBinding) GetMapKey() [3]string {
+	return [3]string{vb.Pool, vb.Image, vb.Destination}
 }
 
 func (vb *VolumeBinding) DeepCopy() *VolumeBinding {
@@ -71,15 +76,10 @@ func NewVolumeBinding(volume string) (_ *VolumeBinding, err error) {
 	sort.Strings(flagParts)
 
 	srcParts := strings.Split(src, "/")
-	pool, image := "", ""
-	switch len(srcParts) {
-	case 1:
-		pool = srcParts[0]
-	case 2:
-		pool, image = srcParts[0], srcParts[1]
-	default:
+	if len(srcParts) != 2 {
 		return nil, errors.Wrap(ErrInvalidVolume, volume)
 	}
+	pool, image := srcParts[0], srcParts[1]
 	vb := &VolumeBinding{
 		Pool:        pool,
 		Image:       image,
@@ -103,6 +103,12 @@ func NewVolumeBinding(volume string) (_ *VolumeBinding, err error) {
 func (vb VolumeBinding) Validate() error {
 	if vb.Destination == "" {
 		return errors.Wrapf(ErrInvalidVolume, "dest must be provided: %+v", vb)
+	}
+	if vb.Pool == "" || vb.Image == "" {
+		return errors.Wrapf(ErrInvalidVolume, "pool and image must be provided: %+v", vb)
+	}
+	if vb.SizeInBytes <= 0 {
+		return errors.Wrapf(ErrInvalidVolume, "invalid size %d", vb.SizeInBytes)
 	}
 	return nil
 }
@@ -136,3 +142,85 @@ func (vb VolumeBinding) ToString(normalize bool) (volume string) {
 }
 
 type VolumeBindings []*VolumeBinding
+
+// NewVolumeBindings return VolumeBindings of reference type
+func NewVolumeBindings(volumes []string) (volumeBindings VolumeBindings, err error) {
+	for _, vb := range volumes {
+		volumeBinding, err := NewVolumeBinding(vb)
+		if err != nil {
+			return nil, err
+		}
+		volumeBindings = append(volumeBindings, volumeBinding)
+	}
+	return
+}
+
+// Validate .
+func (vbs VolumeBindings) Validate() error {
+	seenDest := map[string]bool{}
+	seenSrc := map[string]bool{}
+	for _, vb := range vbs {
+		if err := vb.Validate(); err != nil {
+			return errors.Wrapf(ErrInvalidVolumes, "invalid VolumeBinding: %s", err)
+		}
+		v := seenDest[vb.Destination]
+		if v {
+			return errors.Wrapf(ErrInvalidVolumes, "duplicated destination: %s", vb.Destination)
+		}
+		seenDest[vb.Destination] = true
+
+		src := vb.GetSource()
+		if v := seenSrc[src]; v {
+			if vb.Image != "" {
+				return errors.Wrapf(ErrInvalidVolumes, "duplicated source: %s", src)
+			}
+		}
+		seenSrc[src] = true
+	}
+	return nil
+}
+
+// MergeVolumeBindings combines two VolumeBindings
+func MergeVolumeBindings(vbs1 VolumeBindings, vbs2 ...VolumeBindings) (vbs VolumeBindings) {
+	vbMap := map[[3]string]*VolumeBinding{}
+	for _, vbs := range append(vbs2, vbs1) {
+		for _, vb := range vbs {
+			if binding, ok := vbMap[vb.GetMapKey()]; ok {
+				binding.SizeInBytes += vb.SizeInBytes
+				binding.ReadIOPS += vb.ReadIOPS
+				binding.WriteIOPS += vb.WriteIOPS
+				binding.ReadBPS += vb.ReadBPS
+				binding.WriteBPS += vb.WriteBPS
+			} else {
+				vbMap[vb.GetMapKey()] = &VolumeBinding{
+					Pool:        vb.Pool,
+					Image:       vb.Image,
+					Destination: vb.Destination,
+					Flags:       vb.Flags,
+					SizeInBytes: vb.SizeInBytes,
+					ReadIOPS:    vb.ReadIOPS,
+					WriteIOPS:   vb.WriteIOPS,
+					ReadBPS:     vb.ReadBPS,
+					WriteBPS:    vb.WriteBPS,
+				}
+			}
+		}
+	}
+
+	for _, vb := range vbMap {
+		if vb.SizeInBytes >= 0 {
+			vbs = append(vbs, vb)
+		}
+	}
+	return vbs
+}
+
+func RemoveEmptyVolumeBinding(vbs VolumeBindings) VolumeBindings {
+	var ans VolumeBindings
+	for _, vb := range vbs {
+		if vb.SizeInBytes > 0 {
+			ans = append(ans, vb)
+		}
+	}
+	return ans
+}
