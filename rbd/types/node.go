@@ -88,8 +88,3 @@ type NodeResourceRequest struct {
 func (n *NodeResourceRequest) Parse(rawParams resourcetypes.RawParams) error {
 	return mapstructure.Decode(rawParams, n)
 }
-
-// Merge fields to NodeResourceRequest.
-func (n *NodeResourceRequest) LoadFromOrigin(nodeResource *NodeResource, resourceRequest resourcetypes.RawParams) {
-	return
-}

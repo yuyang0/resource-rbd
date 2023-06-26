@@ -6,7 +6,6 @@ import (
 	"github.com/projecteru2/core/log"
 	plugintypes "github.com/projecteru2/core/resource/plugins/types"
 	resourcetypes "github.com/projecteru2/core/resource/types"
-	coretypes "github.com/projecteru2/core/types"
 	"github.com/sanity-io/litter"
 	rbdtypes "github.com/yuyang0/resource-rbd/rbd/types"
 )
@@ -23,18 +22,19 @@ func (p Plugin) CalculateDeploy(ctx context.Context, nodename string, deployCoun
 		return nil, err
 	}
 
-	nodeResourceInfo, err := p.doGetNodeResourceInfo(ctx, nodename)
-	if err != nil {
-		logger.WithField("node", nodename).Error(ctx, err)
-		return nil, err
-	}
-
 	var enginesParams []*rbdtypes.EngineParams
 	var workloadsResource []*rbdtypes.WorkloadResource
 
-	enginesParams, workloadsResource, err = p.doAlloc(nodeResourceInfo, deployCount, req)
-	if err != nil {
-		return nil, err
+	for i := 0; i < deployCount; i++ {
+		wrkRes := rbdtypes.NewWorkloadResoure()
+		eParams := rbdtypes.EngineParams{}
+		for _, vb := range req.Volumes {
+			vb1 := *vb
+			wrkRes.Volumes = append(wrkRes.Volumes, &vb1)
+			eParams.Volumes = append(eParams.Volumes, vb1.ToString(true))
+		}
+		enginesParams = append(enginesParams, &eParams)
+		workloadsResource = append(workloadsResource, wrkRes)
 	}
 
 	return resourcetypes.RawParams{
@@ -58,16 +58,9 @@ func (p Plugin) CalculateRealloc(ctx context.Context, nodename string, resource 
 		return nil, err
 	}
 
-	nodeResourceInfo, err := p.doGetNodeResourceInfo(ctx, nodename)
-	if err != nil {
-		log.WithFunc("resource.rbd.CalculateRealloc").WithField("node", nodename).Error(ctx, err, "failed to get resource info of node")
-		return nil, err
-	}
 	req = &rbdtypes.WorkloadResourceRequest{
 		Volumes: rbdtypes.MergeVolumeBindings(req.Volumes, originResource.Volumes),
 	}
-	// update size field
-	req.Init()
 
 	if err := req.Validate(); err != nil {
 		logger.Errorf(ctx, err, "invalid resource opts %+v", litter.Sdump(req))
@@ -77,13 +70,18 @@ func (p Plugin) CalculateRealloc(ctx context.Context, nodename string, resource 
 	targetWorkloadResource := &rbdtypes.WorkloadResource{
 		Volumes: req.Volumes,
 	}
-
-	if targetWorkloadResource.Size()-originResource.Size() > nodeResourceInfo.AvailableSize() {
-		return nil, coretypes.ErrInsufficientResource
+	originResSet := map[[3]string]any{}
+	for _, vb := range originResource.Volumes {
+		originResSet[vb.GetMapKey()] = struct{}{}
 	}
-
-	engineParams := &rbdtypes.EngineParams{}
+	engineParams := &rbdtypes.EngineParams{
+		Storage:       targetWorkloadResource.Size(),
+		VolumeChanged: len(originResSet) != len(targetWorkloadResource.Volumes),
+	}
 	for _, vb := range targetWorkloadResource.Volumes {
+		if _, ok := originResSet[vb.GetMapKey()]; !ok {
+			engineParams.VolumeChanged = true
+		}
 		engineParams.Volumes = append(engineParams.Volumes, vb.ToString(true))
 	}
 	deltaWorkloadResource := getDeltaWorkloadResourceArgs(originResource, targetWorkloadResource)
@@ -101,30 +99,18 @@ func (p Plugin) CalculateRemap(context.Context, string, map[string]plugintypes.W
 	}, nil
 }
 
-func (p Plugin) doAlloc(resourceInfo *rbdtypes.NodeResourceInfo, deployCount int, req *rbdtypes.WorkloadResourceRequest) ([]*rbdtypes.EngineParams, []*rbdtypes.WorkloadResource, error) {
-	enginesParams := []*rbdtypes.EngineParams{}
-	workloadsResource := []*rbdtypes.WorkloadResource{}
-	var err error
-
-	availableResource := resourceInfo.GetAvailableResource()
-	totalSize := int64(0)
-	for _, vb := range req.Volumes {
-		totalSize += vb.SizeInBytes
+func getDeltaWorkloadResourceArgs(originResource, targetWorkloadResource *rbdtypes.WorkloadResource) *rbdtypes.WorkloadResource {
+	ans := rbdtypes.NewWorkloadResoure()
+	originSeen := map[[3]string]*rbdtypes.VolumeBinding{}
+	for _, vb := range originResource.Volumes {
+		originSeen[vb.GetMapKey()] = vb
 	}
-	if availableResource.SizeInBytes < int64(deployCount)*totalSize {
-		err = coretypes.ErrInsufficientResource
-		return enginesParams, workloadsResource, err
-	}
-	for i := 0; i < deployCount; i++ {
-		wrkRes := rbdtypes.NewWorkloadResoure()
-		eParams := rbdtypes.EngineParams{}
-		for _, vb := range req.Volumes {
-			vb1 := *vb
-			wrkRes.Volumes = append(wrkRes.Volumes, &vb1)
-			eParams.Volumes = append(eParams.Volumes, vb1.ToString(false))
+	for _, vb := range targetWorkloadResource.Volumes {
+		newVB := *vb
+		if originVB, ok := originSeen[vb.GetMapKey()]; ok {
+			newVB.SizeInBytes = vb.SizeInBytes - originVB.SizeInBytes
 		}
-		enginesParams = append(enginesParams, &eParams)
-		workloadsResource = append(workloadsResource, wrkRes)
+		ans.Volumes = append(ans.Volumes, &newVB)
 	}
-	return enginesParams, workloadsResource, err
+	return ans
 }

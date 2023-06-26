@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -100,15 +101,14 @@ func NewVolumeBinding(volume string) (_ *VolumeBinding, err error) {
 }
 
 // Validate return error if invalid
+// Please note: we allow negative value for SizeInBytes,
+// because Realloc uses negative value to descrease the size of volume.
 func (vb VolumeBinding) Validate() error {
 	if vb.Destination == "" {
 		return errors.Wrapf(ErrInvalidVolume, "dest must be provided: %+v", vb)
 	}
 	if vb.Pool == "" || vb.Image == "" {
 		return errors.Wrapf(ErrInvalidVolume, "pool and image must be provided: %+v", vb)
-	}
-	if vb.SizeInBytes <= 0 {
-		return errors.Wrapf(ErrInvalidVolume, "invalid size %d", vb.SizeInBytes)
 	}
 	return nil
 }
@@ -142,6 +142,33 @@ func (vb VolumeBinding) ToString(normalize bool) (volume string) {
 }
 
 type VolumeBindings []*VolumeBinding
+
+func (vbs VolumeBindings) TotalSize() int64 {
+	ans := int64(0)
+	for _, vb := range vbs {
+		ans += vb.SizeInBytes
+	}
+	return ans
+}
+
+func (vbs *VolumeBindings) UnmarshalJSON(b []byte) (err error) {
+	volumes := []string{}
+	if err = json.Unmarshal(b, &volumes); err != nil {
+		return err
+	}
+	*vbs, err = NewVolumeBindings(volumes)
+	return
+}
+
+// MarshalJSON is used for encoding/json.Marshal
+func (vbs VolumeBindings) MarshalJSON() ([]byte, error) {
+	volumes := []string{}
+	for _, vb := range vbs {
+		volumes = append(volumes, vb.ToString(false))
+	}
+	bs, err := json.Marshal(volumes)
+	return bs, err
+}
 
 // NewVolumeBindings return VolumeBindings of reference type
 func NewVolumeBindings(volumes []string) (volumeBindings VolumeBindings, err error) {
@@ -181,7 +208,7 @@ func (vbs VolumeBindings) Validate() error {
 }
 
 // MergeVolumeBindings combines two VolumeBindings
-func MergeVolumeBindings(vbs1 VolumeBindings, vbs2 ...VolumeBindings) (vbs VolumeBindings) {
+func MergeVolumeBindings(vbs1 VolumeBindings, vbs2 ...VolumeBindings) (ans VolumeBindings) {
 	vbMap := map[[3]string]*VolumeBinding{}
 	for _, vbs := range append(vbs2, vbs1) {
 		for _, vb := range vbs {
@@ -208,11 +235,11 @@ func MergeVolumeBindings(vbs1 VolumeBindings, vbs2 ...VolumeBindings) (vbs Volum
 	}
 
 	for _, vb := range vbMap {
-		if vb.SizeInBytes >= 0 {
-			vbs = append(vbs, vb)
+		if vb.SizeInBytes > 0 {
+			ans = append(ans, vb)
 		}
 	}
-	return vbs
+	return ans
 }
 
 func RemoveEmptyVolumeBinding(vbs VolumeBindings) VolumeBindings {

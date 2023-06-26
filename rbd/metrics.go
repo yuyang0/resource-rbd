@@ -3,6 +3,7 @@ package rbd
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
@@ -29,23 +30,19 @@ func (p Plugin) GetMetricsDescription(context.Context) (*plugintypes.GetMetricsD
 }
 
 // GetMetrics .
-func (p Plugin) GetMetrics(ctx context.Context, podname, nodename string) (*plugintypes.GetMetricsResponse, error) {
-	nodeResourceInfo, err := p.doGetNodeResourceInfo(ctx, nodename)
-	if err != nil {
-		return nil, err
-	}
+func (p Plugin) GetMetrics(ctx context.Context, podname, nodename string) (*plugintypes.GetMetricsResponse, error) { //nolint
 	safeNodename := strings.ReplaceAll(nodename, ".", "_")
 	metrics := []map[string]interface{}{
 		{
 			"name":   "rbd_capacity",
 			"labels": []string{podname, nodename},
-			"value":  fmt.Sprintf("%+v", nodeResourceInfo.CapSize()),
+			"value":  fmt.Sprintf("%+v", math.MaxInt64),
 			"key":    fmt.Sprintf("core.node.%s.rbd.capacity", safeNodename),
 		},
 		{
 			"name":   "rbd_used",
 			"labels": []string{podname, nodename},
-			"value":  fmt.Sprintf("%+v", nodeResourceInfo.UsageSize()),
+			"value":  fmt.Sprintf("%+v", 0),
 			"key":    fmt.Sprintf("core.node.%s.rbd.used", safeNodename),
 		},
 	}
