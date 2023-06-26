@@ -78,7 +78,7 @@ func NewVolumeBinding(volume string) (_ *VolumeBinding, err error) {
 
 	srcParts := strings.Split(src, "/")
 	if len(srcParts) != 2 {
-		return nil, errors.Wrap(ErrInvalidVolume, volume)
+		return nil, errors.Wrapf(ErrInvalidVolume, "wrong source format(pool/image): %s", volume)
 	}
 	pool, image := srcParts[0], srcParts[1]
 	vb := &VolumeBinding{
@@ -143,6 +143,25 @@ func (vb VolumeBinding) ToString(normalize bool) (volume string) {
 
 type VolumeBindings []*VolumeBinding
 
+func (vbs VolumeBindings) Equal(vbs1 VolumeBindings) bool {
+	if len(vbs) != len(vbs1) {
+		return false
+	}
+	seen := map[[3]string]*VolumeBinding{}
+	for _, vb := range vbs {
+		seen[vb.GetMapKey()] = vb
+	}
+	for _, vb1 := range vbs1 {
+		vb, ok := seen[vb1.GetMapKey()]
+		if !ok {
+			return false
+		}
+		if *vb != *vb1 {
+			return false
+		}
+	}
+	return true
+}
 func (vbs VolumeBindings) TotalSize() int64 {
 	ans := int64(0)
 	for _, vb := range vbs {

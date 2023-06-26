@@ -16,8 +16,7 @@ import (
 func TestCalculateDeploy(t *testing.T) {
 	ctx := context.Background()
 	st := initRBD(ctx, t)
-	vols := []string{"/data0:1T", "/data1:1T", "/data2:1T", "/data3:1T"}
-	nodes := generateNodes(ctx, t, st, 1, vols, 0)
+	nodes := generateNodes(ctx, t, st, 1, 0)
 	node := nodes[0]
 	var req plugintypes.WorkloadResourceRequest
 	var err error
@@ -43,8 +42,7 @@ func TestCalculateDeploy(t *testing.T) {
 func TestCalculateRealloc(t *testing.T) {
 	ctx := context.Background()
 	st := initRBD(ctx, t)
-	vols := []string{"/data0:1T", "/data1:1T", "/data2:1T", "/data3:1T"}
-	nodes := generateNodes(ctx, t, st, 1, vols, 0)
+	nodes := generateNodes(ctx, t, st, 1, 0)
 	node := nodes[0]
 
 	bindings, err := types.NewVolumeBindings([]string{
@@ -79,12 +77,12 @@ func TestCalculateRealloc(t *testing.T) {
 	vbs := &types.VolumeBindings{}
 	assert.NoError(t, vbs.UnmarshalJSON([]byte(`
 	[
-		"eru/img0:/dir0:rw:100GiB",
 		"eru/img1:/dir1:mrw:200GiB",
+		"eru/img0:/dir0:rw:100GiB",
 		"eru/img2:/dir2:rw:1TB"
 	]
 	`)))
-	assert.Equal(t, litter.Sdump(vbs), litter.Sdump(&v2.Volumes))
+	assert.Truef(t, vbs.Equal(v2.Volumes), "===\n%s\n===\n%s\n", litter.Sdump(vbs), litter.Sdump(&v2.Volumes))
 
 	// 2. delete One
 	req = plugintypes.WorkloadResourceRequest{
@@ -107,18 +105,17 @@ func TestCalculateRealloc(t *testing.T) {
 	vbs = &types.VolumeBindings{}
 	assert.NoError(t, vbs.UnmarshalJSON([]byte(`
 	[
-		"eru/img0:/dir0:rw:100GiB",
-		"eru/img4:/dir4:rw:2TB"
+		"eru/img4:/dir4:rw:2TB",
+		"eru/img0:/dir0:rw:100GiB"
 	]
 	`)))
-	assert.Equal(t, litter.Sdump(vbs), litter.Sdump(&v2.Volumes))
+	assert.Truef(t, vbs.Equal(v2.Volumes), "===\n%s\n===\n%s\n", litter.Sdump(vbs), litter.Sdump(&v2.Volumes))
 }
 
 func TestCalculateRemap(t *testing.T) {
 	ctx := context.Background()
 	st := initRBD(ctx, t)
-	vols := []string{"/data0:1T", "/data1:1T", "/data2:1T", "/data3:1T"}
-	nodes := generateNodes(ctx, t, st, 1, vols, 0)
+	nodes := generateNodes(ctx, t, st, 1, 0)
 	node := nodes[0]
 	d, err := st.CalculateRemap(ctx, node, nil)
 	assert.NoError(t, err)

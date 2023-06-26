@@ -27,7 +27,7 @@ func initRBD(ctx context.Context, t *testing.T) *Plugin {
 }
 
 func generateNodes(
-	ctx context.Context, t *testing.T, st *Plugin, nums int, vols []string, startIdx int,
+	ctx context.Context, t *testing.T, st *Plugin, nums int, startIdx int,
 ) []string {
 	names := []string{}
 	for i := startIdx; i < startIdx+nums; i++ {
