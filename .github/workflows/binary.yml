@@ -25,5 +25,5 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: eru-gpu-plugin
+          name: eru-rbd-plugin
           path: resource-rbd
