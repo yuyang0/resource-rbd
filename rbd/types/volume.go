@@ -14,7 +14,7 @@ import (
 type VolumeBinding struct {
 	Pool        string `json:"pool" mapstructure:"pool"`
 	Image       string `json:"image" mapstructure:"image"`
-	Destination string `json:"dest" mapstructure:"destination"`
+	Destination string `json:"destination" mapstructure:"destination"`
 	Flags       string `json:"flags" mapstructure:"flags"`
 	SizeInBytes int64  `json:"size_in_bytes" mapstructure:"size_in_bytes"`
 	ReadIOPS    int64  `json:"read_iops" mapstructure:"read_iops"`
