@@ -40,12 +40,19 @@ func Serve(c *cli.Context, f func(s *rbd.Plugin, in resourcetypes.RawParams) (in
 
 	in := resourcetypes.RawParams{}
 	if err := json.NewDecoder(os.Stdin).Decode(&in); err != nil {
+		fmt.Fprintf(os.Stderr, "RBD: failed decode input json: %s\n", err)
+		fmt.Fprintf(os.Stderr, "RBD: input: %v\n", in)
 		return cli.Exit(err, 128)
 	}
 
 	if r, err := f(s, in); err != nil {
+		fmt.Fprintf(os.Stderr, "RBD: failed call function: %s\n", err)
+		fmt.Fprintf(os.Stderr, "RBD: input: %v\n", in)
 		return cli.Exit(err, 128)
 	} else if o, err := json.Marshal(r); err != nil {
+		fmt.Fprintf(os.Stderr, "RBD: failed encode return object: %s\n", err)
+		fmt.Fprintf(os.Stderr, "RBD: input: %v\n", in)
+		fmt.Fprintf(os.Stderr, "RBD: output: %v\n", o)
 		return cli.Exit(err, 128)
 	} else {
 		fmt.Print(string(o))
