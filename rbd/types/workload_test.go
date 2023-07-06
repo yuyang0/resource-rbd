@@ -11,6 +11,17 @@ func TestWorkloadResource(t *testing.T) {
 	wr := &WorkloadResource{}
 	err := wr.Parse(nil)
 	assert.Nil(t, err)
+
+	params := resourcetypes.RawParams{
+		"volumes": []string{
+			"eru/img1:/dir1:mrw:-1111",
+			"eru/img2:/dir2:rw:-2222",
+		},
+	}
+	err = wr.Parse(params)
+	assert.Nil(t, err)
+	assert.Equal(t, wr.Size(), int64(-3333))
+	assert.Equal(t, len(wr.Volumes), 2)
 }
 
 func TestWorkloadResourceRequest(t *testing.T) {

@@ -1,7 +1,9 @@
 package types
 
 import (
-	"github.com/mitchellh/mapstructure"
+	"encoding/json"
+
+	"github.com/cockroachdb/errors"
 	resourcetypes "github.com/projecteru2/core/resource/types"
 )
 
@@ -40,8 +42,13 @@ func (w *WorkloadResource) DeepCopy() *WorkloadResource {
 }
 
 // ParseFromRawParams .
-func (w *WorkloadResource) Parse(rawParams resourcetypes.RawParams) error {
-	return mapstructure.Decode(rawParams, w)
+func (w *WorkloadResource) Parse(rawParams resourcetypes.RawParams) (err error) {
+	// Have to use json because volume plan use customize marshal
+	body, err := json.Marshal(rawParams)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(body, w)
 }
 
 // WorkloadResourceRaw includes all possible fields passed by eru-core for editing workload
@@ -67,7 +74,7 @@ func (w *WorkloadResourceRequest) Validate() error {
 // Parse .
 func (w *WorkloadResourceRequest) Parse(rawParams resourcetypes.RawParams) (err error) {
 	if w.Volumes, err = NewVolumeBindings(rawParams.OneOfStringSlice("volumes", "volume-request", "volumes-request")); err != nil {
-		return err
+		return errors.Wrap(err, "failed to parse workload resource request")
 	}
 	return nil
 }
