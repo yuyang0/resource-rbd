@@ -54,7 +54,7 @@ func Serve(c *cli.Context, f func(s *rbd.Plugin, in resourcetypes.RawParams) (in
 		fmt.Fprintf(os.Stderr, "RBD: input: %v\n", in)
 		fmt.Fprintf(os.Stderr, "RBD: output: %v\n", o)
 		return cli.Exit(err, 128)
-	} else {
+	} else { //nolint
 		fmt.Print(string(o))
 	}
 	return nil
