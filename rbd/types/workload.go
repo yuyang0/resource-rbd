@@ -19,6 +19,12 @@ func NewWorkloadResoure() *WorkloadResource {
 	}
 }
 
+func (w *WorkloadResource) AsRawParams() resourcetypes.RawParams {
+	return resourcetypes.RawParams{
+		"volumes": w.Volumes,
+	}
+}
+
 func (w *WorkloadResource) Size() int64 {
 	if w.totalSize <= 0 {
 		sz := int64(0)

@@ -8,6 +8,10 @@ import (
 // NodeResource indicate node cpumem resource
 type NodeResource struct{}
 
+func (r *NodeResource) AsRawParams() resourcetypes.RawParams {
+	return resourcetypes.RawParams{}
+}
+
 // Parse .
 func (r *NodeResource) Parse(rawParams resourcetypes.RawParams) error {
 	return mapstructure.Decode(rawParams, r)
