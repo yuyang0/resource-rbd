@@ -6,10 +6,9 @@ require (
 	github.com/cockroachdb/errors v1.9.1
 	github.com/docker/go-units v0.5.0
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/projecteru2/core v0.0.0-20230606024007-b4db1600e120
-	github.com/rs/zerolog v1.29.1
+	github.com/projecteru2/core v0.0.0-20231019042116-435f703768f4
 	github.com/sanity-io/litter v1.5.5
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.8.2
 	github.com/urfave/cli/v2 v2.25.1
 )
 
@@ -60,6 +59,7 @@ require (
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
+	github.com/rs/zerolog v1.29.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/soheilhy/cmux v0.1.5 // indirect
@@ -88,11 +88,11 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/crypto v0.8.0 // indirect
+	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/exp v0.0.0-20230425010034-47ecfdc1ba53 // indirect
-	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	google.golang.org/grpc v1.54.1 // indirect

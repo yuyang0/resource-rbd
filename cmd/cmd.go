@@ -6,10 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/projecteru2/core/log"
 	resourcetypes "github.com/projecteru2/core/resource/types"
 	"github.com/projecteru2/core/utils"
-	zerolog "github.com/rs/zerolog/log"
 	"github.com/urfave/cli/v2"
 	"github.com/yuyang0/resource-rbd/rbd"
 )
@@ -30,9 +28,6 @@ func Serve(c *cli.Context, f func(s *rbd.Plugin, in resourcetypes.RawParams) (in
 		t = &testing.T{}
 	}
 
-	if err := log.SetupLog(c.Context, cfg.LogLevel, cfg.SentryDSN); err != nil {
-		zerolog.Fatal().Err(err).Send()
-	}
 	s, err := rbd.NewPlugin(c.Context, cfg, t)
 	if err != nil {
 		return cli.Exit(err, 128)
